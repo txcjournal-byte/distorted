@@ -3,11 +3,14 @@
 Frontend prototype. Generate a song from your own lyrics in the style of a
 chosen artist.
 
-**This build.** `GENERATE SONG` produces real, audible audio — rendered in the
-browser from the Style DNA, with no API key and no network. It is a procedural
-instrumental, **not a music model**, and it cannot sing your lyrics. Its job is
-to make the whole flow testable and to show what the Style DNA parameters
-actually drive. A real music model still has to be connected.
+**This build.** Two working engines:
+
+- **`elevenlabs`** — real generation with sung vocals through ElevenLabs Music,
+  proxied by `server/index.mjs` so the API key never reaches the browser.
+  Needs a key.
+- **`local`** (default) — a procedural instrumental rendered in the browser from
+  the Style DNA. No key, no network, no vocals. It is **not** a music model;
+  it exists so the flow works everywhere.
 
 ## Run
 
@@ -18,8 +21,19 @@ npm run dev      # http://localhost:5173
 
 Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`.
 
-Set `VITE_ENGINE` (see `.env.example`) to pick the engine: `local` (default,
-audible) or `mock` (staged, silent).
+### Real generation
+
+```bash
+cp .env.example .env          # then put your key in ELEVENLABS_API_KEY
+npm run server                # generation proxy on :8787
+VITE_ENGINE=elevenlabs npm run dev
+```
+
+Two processes: Vite proxies `/api` to the generation server, which holds the
+key. Get a key at elevenlabs.io → profile → API keys.
+
+`VITE_ENGINE` picks the engine — `elevenlabs`, `local` (default) or `mock`
+(staged, silent). See `.env.example`.
 
 ## Flow
 
@@ -78,21 +92,41 @@ limiter here.
 
 Seeded by the lyrics, so the same words always produce the same track.
 
-### Connecting a real music AI later
+### How the Style DNA reaches the model
+
+`compileCompositionPlan` in `prompt.ts` turns a profile plus the user's lyrics
+into an ElevenLabs `composition_plan`, which the DNA maps onto almost directly:
+
+| Plan field | Comes from |
+| --- | --- |
+| `chunks[].positive_styles` | `promptSeeds.include` + production palette, drums, bass, vocal delivery, mood, tempo |
+| `chunks[].negative_styles` | `promptSeeds.exclude` |
+| `chunks[].text` | section label + that section's lyrics |
+| `chunks[].duration_ms` | `structure.typicalLengthSeconds`, clamped to a musical section length |
+
+Lyrics split on `[hook]` / `[verse]` markers when present, otherwise on blank
+lines.
+
+**The artist's name is never sent.** Providers reject prompts that name a real
+artist — ElevenLabs answers `bad_prompt` / `bad_composition_plan` for
+copyrighted references and returns a suggested rephrasing, which the proxy
+passes through to the UI. The plan carries sonic descriptors only, which is
+exactly what the Style DNA exists to provide. `compileCompositionPlan` also
+filters the artist's own name out of the style lists as a backstop.
+
+### Adding another provider
 
 `src/generation/types.ts` defines the `MusicEngine` interface; `engine.ts` picks
-the implementation. Add a provider engine to `ENGINES` and select it with
-`VITE_ENGINE`. `compileStylePrompt` already produces the prompt, negative
-prompt, lyrics and parameters such a backend needs.
+the implementation from `ENGINES`. Implement the interface, add it there, select
+it with `VITE_ENGINE`. Keep the key server-side.
 
-Two things that implementation must respect:
+### Known gaps
 
-- **The API key cannot ship to the browser.** The provider engine should call
-  your own server, which holds the key and proxies the request.
-- **Do not send the artist's name.** Most providers reject prompts naming a real
-  artist. The compiled prompt deliberately carries sonic attributes only
-  (detuned supersaw lead, distorted 808, half-time groove, tempo, key) — which
-  is exactly why the Style DNA research matters.
+- The Style DNA ships in the browser bundle. It is hidden from the UI, but a
+  determined reader can find it. Moving the profiles and the plan compiler
+  behind the proxy is the productionisation step.
+- Generation is not deterministic — the same lyrics give a different track each
+  time.
 
 ## Status of the data
 

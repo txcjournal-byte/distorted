@@ -52,7 +52,7 @@ export function TrackResult({ track, onReset }: TrackResultProps) {
         <div>
           <p className="result__kicker">
             {track.audio
-              ? `${track.engine.toUpperCase()} RENDER · INSTRUMENTAL`
+              ? `${track.engine.toUpperCase()} RENDER${track.audio.instrumental ? ' · INSTRUMENTAL' : ' · WITH VOCALS'}`
               : 'MOCK RENDER · NO AUDIO'}
           </p>
           <GlitchText className="result__title" text={track.title} />
@@ -165,9 +165,11 @@ export function TrackResult({ track, onReset }: TrackResultProps) {
       </div>
 
       <p className="result__note">
-        {track.audio
-          ? 'Rendered locally from the Style DNA — a procedural instrumental, not a music model. Vocals need a real backend.'
-          : 'Playback is stubbed in this engine.'}
+        {!track.audio
+          ? 'Playback is stubbed in this engine.'
+          : track.audio.instrumental
+            ? 'Rendered locally from the Style DNA — a procedural instrumental, not a music model. Vocals need a real backend.'
+            : 'Generated from the Style DNA by the music model. The artist\u2019s name is never sent — only the sonic descriptors.'}
       </p>
     </section>
   )
