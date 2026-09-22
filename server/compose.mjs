@@ -3,7 +3,9 @@
  * serverless function (api/generate.js) so both behave identically.
  */
 
-const COMPOSE_URL = 'https://api.elevenlabs.io/v1/music/compose'
+// POST /v1/music takes either `prompt` or `composition_plan` (see the
+// official @elevenlabs/elevenlabs-js SDK, music.compose).
+const COMPOSE_URL = 'https://api.elevenlabs.io/v1/music'
 
 /** Turns a provider failure into something the UI can show verbatim. */
 export function describeFailure(status, raw) {
@@ -18,7 +20,14 @@ export function describeFailure(status, raw) {
   const suggestion =
     detail?.detail?.prompt_suggestion ?? detail?.detail?.composition_plan_suggestion ?? null
 
-  if (status === 401) return { status: 401, message: 'API KEY REJECTED — CHECK ELEVENLABS_API_KEY' }
+  // The provider's own words say whether the key is wrong, lacks the music
+  // permission, or the plan does not include music — pass them through.
+  const reason = detail?.detail?.message ?? (typeof detail?.detail === 'string' ? detail.detail : null)
+  const why = reason ? ` — ${String(reason).slice(0, 200).toUpperCase()}` : ''
+
+  if (status === 401) return { status: 401, message: `API KEY REJECTED${why || ' — CHECK ELEVENLABS_API_KEY'}` }
+  if (status === 402) return { status: 402, message: `ELEVENLABS PLAN OR CREDITS DO NOT COVER MUSIC${why}` }
+  if (status === 403) return { status: 403, message: `ELEVENLABS REFUSED THE REQUEST${why}` }
   if (status === 429) return { status: 429, message: 'RATE LIMITED — TRY AGAIN SHORTLY' }
 
   if (kind === 'bad_prompt' || kind === 'bad_composition_plan') {
@@ -30,10 +39,10 @@ export function describeFailure(status, raw) {
   }
 
   if (status === 422) {
-    return { status: 422, message: 'PROVIDER REJECTED THE PLAN — INVALID PARAMETERS', detail }
+    return { status: 422, message: `PROVIDER REJECTED THE PLAN — INVALID PARAMETERS${why}`, detail }
   }
 
-  return { status: 502, message: `PROVIDER ERROR ${status}`, detail }
+  return { status: 502, message: `PROVIDER ERROR ${status}${why}`, detail }
 }
 
 const MIN_LENGTH_MS = 10_000

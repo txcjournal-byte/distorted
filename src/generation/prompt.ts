@@ -120,6 +120,15 @@ export function splitLyrics(lyrics: string): LyricSection[] {
     .map((body, index) => ({ label: index % 2 === 0 ? 'Verse' : 'Chorus', body }))
 }
 
+/** The provider allows at most 30 lines of at most 200 characters per chunk. */
+function clampLyrics(body: string): string {
+  return body
+    .split('\n')
+    .slice(0, 29)
+    .map((line) => line.slice(0, 200))
+    .join('\n')
+}
+
 function titleCase(label: string): string {
   return label
     .split(/\s+/)
@@ -182,7 +191,7 @@ export function compileCompositionPlan(profile: StyleProfile, lyrics: string): C
     chunks: parts.map((part) => ({
       text: part.body === ''
         ? `[${titleCase(part.label)}]`
-        : `[${titleCase(part.label)}]\n${part.body}`,
+        : `[${titleCase(part.label).slice(0, 100)}]\n${clampLyrics(part.body)}`,
       duration_ms: duration,
       positive_styles: positive,
       negative_styles: negative,
