@@ -190,3 +190,41 @@ export function compileCompositionPlan(profile: StyleProfile, lyrics: string): C
     })),
   }
 }
+
+/* ------------------------------------------------------------------------ */
+/* Instrumental prompt                                                      */
+/* ------------------------------------------------------------------------ */
+
+export interface InstrumentalPrompt {
+  prompt: string
+  lengthMs: number
+}
+
+/**
+ * One free-text prompt for an instrumental take. Like the plan, it carries
+ * sonic descriptors only — never the artist's name. The seed picks a tempo
+ * inside the profile's range so two takes do not come back identical.
+ */
+export function compileInstrumentalPrompt(profile: StyleProfile, seed: number): InstrumentalPrompt {
+  const { dna } = profile
+  const [low, high] = dna.rhythm.tempoRange
+  const tempo = low + (seed % (high - low + 1))
+
+  const nameTokens = profile.displayName
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((token) => token.length > 2)
+  const safe = (text: string) => !nameTokens.some((token) => text.toLowerCase().includes(token))
+
+  const parts = [
+    `Instrumental trap beat, no vocals. ${dna.promptSeeds.spine}`,
+    `${dna.promptSeeds.include.filter(safe).join(', ')}`,
+    `${tempo} BPM, ${(dna.harmony.preferredKeys[0] ?? 'minor key').replace(/\(.*?\)/g, '').trim()}`,
+    `Avoid: ${dna.promptSeeds.exclude.filter(safe).join(', ')}`,
+  ].filter(safe)
+
+  return {
+    prompt: parts.join('. '),
+    lengthMs: middle(dna.structure.typicalLengthSeconds) * 1000,
+  }
+}

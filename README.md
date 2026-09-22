@@ -1,7 +1,8 @@
 # DISTORTED
 
-Frontend prototype. Generate a song from your own lyrics in the style of a
-chosen artist.
+A Suno-style song generator for **trap only**. Pick a trap artist style,
+paste your lyrics (or go instrumental), hit generate, get two takes, keep the
+ones you like in My Songs.
 
 **This build.** Two working engines:
 
@@ -52,15 +53,48 @@ the pieces separately: `npm run server` and `npm run dev`.
 
 ## Flow
 
-1. Pick a style reference (currently only **TRIPPIE REDD**, preselected).
-2. Paste your lyrics.
-3. Hit `GENERATE SONG`.
-4. The app silently loads that artist's hidden Style DNA profile, compiles it
-   into a model payload, renders audio, and hands back a playable track with a
-   waveform drawn from the real peaks, a seek bar and a WAV download.
+1. Pick a style — six trap artists, each playing through a trap lane
+   (rage, drill, detroit, melodic…).
+2. Paste your lyrics, or switch on **INSTRUMENTAL** (lyrics optional; `[Hook]` /
+   `[Verse]` markers still shape the beat). **+ STRUCTURE** inserts the markers.
+3. Hit `GENERATE SONG`. Every press makes **two takes** with different seeds —
+   tempo, key, motif and groove differ — and each is playable as soon as it lands.
+4. Takes appear under the button and in **My Songs** (sidebar or the LIBRARY
+   tab): search, filter (liked / vocals / instrumental), like, read the lyrics,
+   download, delete.
+5. Everything plays through one bottom player bar with previous / next and seek.
 
 The Style DNA is never shown on screen. The UI only ever receives an
 `ArtistSummary` (name, tagline, tags, era).
+
+### Trap lanes
+
+`src/trap/styles.ts` defines the lanes — ATL trap, dark trap, rage, drill,
+plugg, phonk, melodic and Detroit — each with prompt descriptors for a music
+model and a `sound` block for the local renderer (drum grammar, lead voice,
+808 drive/glide, hat rolls).
+
+Every style profile names its lane. Trippie Redd keeps the researched rage
+profile; the other five artists have no researched DNA yet, so
+`src/style-dna/lanes.ts` builds their profiles from the lane's generic
+descriptors, marked `unverified` throughout. A researched profile in
+`artists/` replaces one of these without touching anything else.
+
+| Artist | Lane |
+| --- | --- |
+| Trippie Redd | rage (researched profile) |
+| Chief Keef | drill |
+| Rio Da Yung OG | detroit |
+| Playboi Carti | rage |
+| Lil Uzi Vert | melodic |
+| Ken Carson | rage |
+
+### My Songs
+
+Stored in this browser only. Metadata goes to `localStorage`. A local render
+is **not** stored as audio — its `SongRecipe` (seed, tempo, key, sections,
+sound) rebuilds the identical WAV when played or downloaded. Model output
+can't be rebuilt, so that file is kept in IndexedDB.
 
 ## Architecture
 
@@ -71,7 +105,11 @@ src/
     registry.ts           artist lookup — the only file to touch when adding one
     artists/
       trippie-redd.ts     DRAFT profile data
+  trap/styles.ts          the trap lanes: prompt descriptors + renderer sound
+  style-dna/lanes.ts      lane-based profiles for artists not yet researched
+  library/                My Songs: localStorage + IndexedDB, audio URL cache
   generation/
+    recipe.ts             profile + lyrics + seed -> SongRecipe (the renderer input)
     prompt.ts             StyleProfile + lyrics -> model payload / composition plan
     types.ts              MusicEngine interface and track types
     engine.ts             picks the engine from VITE_ENGINE
@@ -80,7 +118,9 @@ src/
     audio/render.ts       the Web Audio renderer
     audio/theory.ts       key/scale helpers
     audio/wav.ts          WAV encoding and waveform peaks
-  hooks/useGeneration.ts  stage/track/error state for the UI
+  hooks/useGeneration.ts  runs the takes, stage/error state for the UI
+  hooks/useLibrary.ts     the persisted song list
+  hooks/usePlayer.ts      the single <audio> behind the bottom player bar
   components/             presentation only, no DNA access
 ```
 
@@ -94,18 +134,21 @@ from the registry.
 
 ### The local renderer
 
-`src/generation/audio/render.ts` turns the profile's tempo, key, arrangement,
-distortion and saturation into an instrumental: half-time kick and clap, fast
-rolling hats, a distorted gliding 808, and a detuned saw lead playing a motif
-generated from the seed. Nothing is sampled or lifted from any record.
+`src/generation/audio/render.ts` plays a `SongRecipe` through the lane's drum
+grammar: half-time trap, skipping drill hats with octave-sliding 808s, rage
+16ths under a detuned supersaw, plugg bounce, phonk cowbells, Detroit's
+off-beat kicks on a two-and-four backbeat. The 808 follows the kick; a seeded
+chord loop and two-bar motif play on the lane's lead voice (supersaw, FM
+bell, pluck, keys, pad, flute or cowbell). Verses thin the lead out to leave
+room for a voice. Nothing is sampled or lifted from any record.
 
-It renders one short cell per section kind and tiles them — rage is loop-driven
-anyway, and one graph holding every hit takes far too long to render. Peak
-control happens on the finished buffer, because Web Audio's
+It renders one short cell per section kind and tiles them — trap is
+loop-driven anyway, and one graph holding every hit takes far too long to
+render. Peak control happens on the finished buffer, because Web Audio's
 `DynamicsCompressorNode` applies its own makeup gain and cannot act as a
 limiter here.
 
-Seeded by the lyrics, so the same words always produce the same track.
+Seeded per take: the same recipe always renders the same audio.
 
 ### How the Style DNA reaches the model
 
@@ -121,6 +164,9 @@ into an ElevenLabs `composition_plan`, which the DNA maps onto almost directly:
 
 Lyrics split on `[hook]` / `[verse]` markers when present, otherwise on blank
 lines.
+
+Instrumental takes skip the plan and send one text prompt with
+`force_instrumental` (`compileInstrumentalPrompt`).
 
 **The artist's name is never sent.** Providers reject prompts that name a real
 artist — ElevenLabs answers `bad_prompt` / `bad_composition_plan` for
@@ -151,8 +197,9 @@ it with `VITE_ENGINE`. Keep the key server-side.
 - The Style DNA ships in the browser bundle. It is hidden from the UI, but a
   determined reader can find it. Moving the profiles and the plan compiler
   behind the proxy is the productionisation step.
-- Generation is not deterministic — the same lyrics give a different track each
-  time.
+- Model generation is not deterministic — the same lyrics give a different
+  track each time. Local takes are reproducible from their recipe.
+- Two takes against a model means two provider calls, and two charges.
 
 ## Status of the data
 
@@ -196,7 +243,7 @@ are covered.
 
 No artist photography ships with this prototype. Each card renders a
 deterministic placeholder mark until a licensed image is supplied: set
-`portrait` on the profile (or on the entry in `UPCOMING`) to an image URL and
+`portrait` on the profile (or on the entry in `LANE_ARTISTS`) to an image URL and
 the card uses it automatically.
 
 ### Locked artists

@@ -6,15 +6,17 @@ interface GenerateBarProps {
   disabled?: boolean
   busy?: boolean
   engine: EngineInfo | null
+  takes: number
 }
 
-function engineLabel(engine: EngineInfo): string {
-  if (engine.vocals) return 'REAL GENERATION · YOUR LYRICS WILL BE SUNG'
-  if (engine.audio) return 'LOCAL RENDER · INSTRUMENTAL, NO VOCALS'
+function engineLabel(engine: EngineInfo, takes: number): string {
+  const count = `${takes} TAKES PER GENERATION`
+  if (engine.vocals) return `REAL GENERATION · YOUR LYRICS WILL BE SUNG · ${count}`
+  if (engine.audio) return `LOCAL RENDER · INSTRUMENTAL, NO VOCALS · ${count}`
   return 'MOCK ENGINE · NO AUDIO'
 }
 
-export function GenerateBar({ onClick, disabled, busy, engine }: GenerateBarProps) {
+export function GenerateBar({ onClick, disabled, busy, engine, takes }: GenerateBarProps) {
   return (
     <div className="generate">
       <button
@@ -31,7 +33,7 @@ export function GenerateBar({ onClick, disabled, busy, engine }: GenerateBarProp
       <p className="generate__tagline">YOUR WORDS. THEIR SOUND.</p>
       {engine && (
         <p className={`generate__engine ${engine.vocals ? 'generate__engine--live' : ''}`}>
-          {engineLabel(engine)}
+          {engineLabel(engine, takes)}
         </p>
       )}
     </div>

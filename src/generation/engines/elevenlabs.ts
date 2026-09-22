@@ -1,9 +1,8 @@
 import { getStyleProfile } from '../../style-dna/registry'
 import { peaks } from '../audio/wav'
-import { compileCompositionPlan, compileStylePrompt } from '../prompt'
-import { hash } from '../random'
+import { compileCompositionPlan, compileInstrumentalPrompt, compileStylePrompt } from '../prompt'
 import {
-  deriveTitle,
+  titleFor,
   type GenerateRequest,
   type GeneratedTrack,
   type GenerationStage,
@@ -34,13 +33,19 @@ export class ElevenLabsEngine implements MusicEngine {
     signal?: AbortSignal,
   ): Promise<GeneratedTrack> {
     const lyrics = request.lyrics.trim()
-    if (lyrics.length === 0) throw new Error('NO LYRICS — PASTE SOMETHING FIRST')
+    if (lyrics.length === 0 && !request.instrumental) {
+      throw new Error('NO LYRICS — PASTE SOMETHING FIRST OR SWITCH TO INSTRUMENTAL')
+    }
 
     const profile = getStyleProfile(request.artistId)
     if (!profile) throw new Error(`UNKNOWN STYLE PROFILE: ${request.artistId}`)
 
     onStage('parsing-lyrics')
-    const plan = compileCompositionPlan(profile, lyrics)
+    // Lyrics go section by section; an instrumental is one prompt.
+    const plan = request.instrumental ? null : compileCompositionPlan(profile, lyrics)
+    const body = plan
+      ? { plan }
+      : { ...compileInstrumentalPrompt(profile, request.seed), instrumental: true }
     const debugPrompt = compileStylePrompt(profile, lyrics)
 
     onStage('loading-style-dna')
@@ -50,7 +55,7 @@ export class ElevenLabsEngine implements MusicEngine {
     const response = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify(body),
       signal,
     })
 
@@ -76,21 +81,30 @@ export class ElevenLabsEngine implements MusicEngine {
 
     onStage('done')
 
+    const labels = plan
+      ? plan.chunks.map((chunk, index) =>
+          (chunk.text.match(/^\[([^\]]+)\]/)?.[1] ?? `PART ${index + 1}`).toUpperCase(),
+        )
+      : ['BEAT']
+
     return {
-      id: `trk_${hash(lyrics).toString(36)}`,
-      title: deriveTitle(lyrics),
+      id: `trk_${request.seed.toString(36)}_${request.take}`,
+      title: titleFor(request, profile.displayName),
+      artistId: profile.id,
       artistName: profile.displayName,
       createdAt: new Date().toISOString(),
       durationSeconds: Math.round(decoded.duration),
       tempo: debugPrompt.params.tempo,
       key: debugPrompt.params.key,
       waveform: peaks(decoded, WAVEFORM_BARS),
-      sections: plan.chunks.map((chunk, index) => ({
-        label: (chunk.text.match(/^\[([^\]]+)\]/)?.[1] ?? `PART ${index + 1}`).toUpperCase(),
-        startSeconds: Math.round((index * decoded.duration) / plan.chunks.length),
+      sections: labels.map((label, index) => ({
+        label,
+        startSeconds: Math.round((index * decoded.duration) / labels.length),
       })),
-      audio: { url: URL.createObjectURL(blob), blob, instrumental: false },
+      audio: { url: URL.createObjectURL(blob), blob, instrumental: request.instrumental },
       engine: this.name,
+      lyrics,
+      recipe: null,
       debugPrompt,
     }
   }

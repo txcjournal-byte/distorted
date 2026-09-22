@@ -11,6 +11,8 @@
  * replaced, not trusted.
  */
 
+import type { TrapStyleId } from '../trap/styles'
+
 export type StyleProfileId = string
 
 export type ProfileStatus = 'draft' | 'researched' | 'calibrated'
@@ -152,6 +154,8 @@ export interface StyleProfile {
   version: string
   /** Optional portrait. Supply a licensed image; the UI falls back to a mark. */
   portrait: string | null
+  /** The trap production lane the local renderer plays this profile through. */
+  lane: TrapStyleId
   /** Hidden. Never render this. */
   dna: StyleDNA
   evidence: DNAEvidence

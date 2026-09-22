@@ -25,6 +25,7 @@ export const trippieRedd: StyleProfile = {
   status: 'draft',
   version: '0.2.0-draft-rage-era',
   portrait: null,
+  lane: 'rage',
 
   dna: {
     // Genre-level, sourced. Rage is described as trap crossed with future bass,

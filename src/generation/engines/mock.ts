@@ -1,8 +1,8 @@
 import { getStyleProfile } from '../../style-dna/registry'
 import { compileStylePrompt } from '../prompt'
-import { createRandom, hash } from '../random'
+import { createRandom } from '../random'
 import {
-  deriveTitle,
+  titleFor,
   wait,
   type GenerateRequest,
   type GeneratedTrack,
@@ -28,7 +28,9 @@ export class MockMusicEngine implements MusicEngine {
     signal?: AbortSignal,
   ): Promise<GeneratedTrack> {
     const lyrics = request.lyrics.trim()
-    if (lyrics.length === 0) throw new Error('NO LYRICS — PASTE SOMETHING FIRST')
+    if (lyrics.length === 0 && !request.instrumental) {
+      throw new Error('NO LYRICS — PASTE SOMETHING FIRST OR SWITCH TO INSTRUMENTAL')
+    }
 
     const profile = getStyleProfile(request.artistId)
     if (!profile) throw new Error(`UNKNOWN STYLE PROFILE: ${request.artistId}`)
@@ -40,7 +42,7 @@ export class MockMusicEngine implements MusicEngine {
     onStage('done')
 
     const debugPrompt = compileStylePrompt(profile, lyrics)
-    const random = createRandom(hash(`${profile.id}:${lyrics}`))
+    const random = createRandom(request.seed)
     const waveform = Array.from({ length: 96 }, (_, i) => {
       const envelope = 0.45 + 0.55 * Math.sin((i / 96) * Math.PI * 3)
       return Math.min(1, Math.max(0.08, Math.abs(envelope) * (0.4 + random() * 0.8)))
@@ -53,8 +55,9 @@ export class MockMusicEngine implements MusicEngine {
     }))
 
     return {
-      id: `trk_${hash(lyrics).toString(36)}`,
-      title: deriveTitle(lyrics),
+      id: `trk_${request.seed.toString(36)}_${request.take}`,
+      title: titleFor(request, profile.displayName),
+      artistId: profile.id,
       artistName: profile.displayName,
       createdAt: new Date().toISOString(),
       durationSeconds: duration,
@@ -64,6 +67,8 @@ export class MockMusicEngine implements MusicEngine {
       sections,
       audio: null,
       engine: this.name,
+      lyrics,
+      recipe: null,
       debugPrompt,
     }
   }

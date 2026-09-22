@@ -24,7 +24,7 @@ export function describeFailure(status, raw) {
   if (kind === 'bad_prompt' || kind === 'bad_composition_plan') {
     return {
       status: 400,
-      message: 'PROVIDER REJECTED THE STYLE AS COPYRIGHTED — ADJUST THE STYLE DNA SEEDS',
+      message: 'PROVIDER REJECTED THE STYLE AS COPYRIGHTED — REMOVE ARTIST NAMES FROM THE DESCRIPTION',
       suggestion,
     }
   }
@@ -36,15 +36,36 @@ export function describeFailure(status, raw) {
   return { status: 502, message: `PROVIDER ERROR ${status}`, detail }
 }
 
+const MIN_LENGTH_MS = 10_000
+const MAX_LENGTH_MS = 300_000
+
 /**
- * Sends a composition plan to ElevenLabs.
+ * Builds the provider body from what the browser sent. Two shapes:
+ *   { plan }                                  — custom lyrics, section by section
+ *   { prompt, lengthMs, instrumental }        — a description; the model writes
+ *                                               its own lyrics unless instrumental
+ */
+function providerBody(input, modelId) {
+  if (input.plan) return { composition_plan: input.plan, model_id: modelId }
+
+  const length = Math.round(Number(input.lengthMs) || 120_000)
+  return {
+    prompt: String(input.prompt).slice(0, 4000),
+    music_length_ms: Math.min(MAX_LENGTH_MS, Math.max(MIN_LENGTH_MS, length)),
+    force_instrumental: Boolean(input.instrumental),
+    model_id: modelId,
+  }
+}
+
+/**
+ * Sends a composition plan or a prompt to ElevenLabs.
  * Resolves to `{ ok: true, audio, contentType }` or `{ ok: false, failure }`.
  */
-export async function compose(plan, { apiKey, modelId = 'music_v2' }) {
+export async function compose(input, { apiKey, modelId = 'music_v2' }) {
   const upstream = await fetch(COMPOSE_URL, {
     method: 'POST',
     headers: { 'xi-api-key': apiKey, 'content-type': 'application/json' },
-    body: JSON.stringify({ composition_plan: plan, model_id: modelId }),
+    body: JSON.stringify(providerBody(input, modelId)),
   })
 
   if (!upstream.ok) {
@@ -60,9 +81,15 @@ export async function compose(plan, { apiKey, modelId = 'music_v2' }) {
   }
 }
 
-export function validatePlan(plan) {
-  if (!plan || !Array.isArray(plan.chunks) || plan.chunks.length === 0) {
-    return 'MISSING COMPOSITION PLAN'
+/** Returns an error message, or null when the request is usable. */
+export function validateRequest(input) {
+  if (!input || typeof input !== 'object') return 'EMPTY REQUEST'
+  if (input.plan) {
+    if (!Array.isArray(input.plan.chunks) || input.plan.chunks.length === 0) {
+      return 'MISSING COMPOSITION PLAN'
+    }
+    return null
   }
+  if (typeof input.prompt !== 'string' || input.prompt.trim() === '') return 'MISSING PROMPT'
   return null
 }

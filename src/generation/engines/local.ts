@@ -1,10 +1,10 @@
 import { getStyleProfile } from '../../style-dna/registry'
-import { renderTrack } from '../audio/render'
+import { renderRecipe } from '../audio/render'
 import { audioBufferToWav, peaks } from '../audio/wav'
 import { compileStylePrompt } from '../prompt'
-import { hash } from '../random'
+import { buildRecipe, type SongRecipe } from '../recipe'
 import {
-  deriveTitle,
+  titleFor,
   wait,
   type GenerateRequest,
   type GeneratedTrack,
@@ -12,11 +12,19 @@ import {
   type MusicEngine,
 } from '../types'
 
+const WAVEFORM_BARS = 96
+
+/** Rebuilds a stored song's audio. Same recipe in, same WAV out. */
+export async function renderRecipeToWav(recipe: SongRecipe): Promise<Blob> {
+  const rendered = await renderRecipe(recipe)
+  return audioBufferToWav(rendered.buffer)
+}
+
 /**
- * Renders audible audio locally from the Style DNA, with no network and no
- * API key. It is a procedural sketch, not a music model: it plays an
- * instrumental built from the profile's tempo, key, arrangement, distortion
- * and palette, and it cannot sing the lyrics.
+ * Renders audible audio locally, with no network and no API key. It is a
+ * procedural trap beat machine, not a music model: it plays the profile's
+ * lane (drums, 808, lead voice) at the take's tempo and key, and it cannot
+ * sing the lyrics.
  */
 export class LocalSynthEngine implements MusicEngine {
   readonly name = 'local-synth'
@@ -27,7 +35,9 @@ export class LocalSynthEngine implements MusicEngine {
     signal?: AbortSignal,
   ): Promise<GeneratedTrack> {
     const lyrics = request.lyrics.trim()
-    if (lyrics.length === 0) throw new Error('NO LYRICS — PASTE SOMETHING FIRST')
+    if (lyrics.length === 0 && !request.instrumental) {
+      throw new Error('NO LYRICS — PASTE SOMETHING FIRST OR SWITCH TO INSTRUMENTAL')
+    }
 
     const profile = getStyleProfile(request.artistId)
     if (!profile) throw new Error(`UNKNOWN STYLE PROFILE: ${request.artistId}`)
@@ -37,38 +47,41 @@ export class LocalSynthEngine implements MusicEngine {
     }
 
     onStage('parsing-lyrics')
-    await wait(400, signal)
+    await wait(250, signal)
 
     onStage('loading-style-dna')
     const debugPrompt = compileStylePrompt(profile, lyrics)
-    await wait(400, signal)
+    await wait(250, signal)
 
     onStage('arranging')
-    await wait(300, signal)
+    const recipe = buildRecipe(profile, lyrics, request.instrumental, request.seed)
+    await wait(200, signal)
 
     onStage('rendering')
-    const seed = hash(`${profile.id}:${lyrics}`)
-    const rendered = await renderTrack(profile, seed)
+    const rendered = await renderRecipe(recipe)
     if (signal?.aborted) throw new DOMException('aborted', 'AbortError')
 
     onStage('mastering')
     const blob = audioBufferToWav(rendered.buffer)
-    const waveform = peaks(rendered.buffer, 96)
-    await wait(250, signal)
+    const waveform = peaks(rendered.buffer, WAVEFORM_BARS)
+    await wait(150, signal)
     onStage('done')
 
     return {
-      id: `trk_${hash(lyrics).toString(36)}`,
-      title: deriveTitle(lyrics),
+      id: `trk_${request.seed.toString(36)}_${request.take}`,
+      title: titleFor(request, profile.displayName),
+      artistId: profile.id,
       artistName: profile.displayName,
       createdAt: new Date().toISOString(),
       durationSeconds: rendered.durationSeconds,
-      tempo: rendered.tempo,
-      key: rendered.keyLabel,
+      tempo: recipe.tempo,
+      key: recipe.keyLabel,
       waveform,
       sections: rendered.sections,
       audio: { url: URL.createObjectURL(blob), blob, instrumental: true },
       engine: this.name,
+      lyrics,
+      recipe,
       debugPrompt,
     }
   }

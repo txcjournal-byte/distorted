@@ -8,84 +8,104 @@ import type { StyleProfileId } from '../style-dna/types'
 
 export interface GenerationState {
   stage: GenerationStage
-  track: GeneratedTrack | null
+  /** 1-based take being worked on. */
+  take: number
+  takes: number
   error: string | null
   isRunning: boolean
 }
 
 const INITIAL: GenerationState = {
   stage: 'idle',
-  track: null,
+  take: 0,
+  takes: 0,
   error: null,
   isRunning: false,
 }
 
-/** Rendered audio lives in an object URL; drop it or the blob leaks. */
-function release(track: GeneratedTrack | null) {
-  if (track?.audio) URL.revokeObjectURL(track.audio.url)
+export interface GenerateOptions {
+  artistId: StyleProfileId
+  lyrics: string
+  instrumental: boolean
+  /** Like Suno: every hit of GENERATE gives more than one take. */
+  takes: number
 }
 
-export function useGeneration() {
+function newSeed(): number {
+  const bytes = new Uint32Array(1)
+  crypto.getRandomValues(bytes)
+  return bytes[0] || 1
+}
+
+/**
+ * Runs the engine once per take and hands finished tracks to `onTrack` as
+ * each lands, so the first take is playable while the second renders.
+ */
+export function useGeneration(onTrack: (track: GeneratedTrack) => void) {
   const [state, setState] = useState<GenerationState>(INITIAL)
   const abortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
-  const trackRef = useRef<GeneratedTrack | null>(null)
+  const onTrackRef = useRef(onTrack)
+  onTrackRef.current = onTrack
 
   useEffect(() => {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
       abortRef.current?.abort()
-      release(trackRef.current)
-      trackRef.current = null
     }
   }, [])
 
-  const generate = useCallback(async (artistId: StyleProfileId, lyrics: string) => {
+  const generate = useCallback(async (options: GenerateOptions) => {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
+    const live = () => mountedRef.current && !controller.signal.aborted
 
-    release(trackRef.current)
-    trackRef.current = null
-    setState({ stage: 'parsing-lyrics', track: null, error: null, isRunning: true })
+    setState({ stage: 'parsing-lyrics', take: 1, takes: options.takes, error: null, isRunning: true })
 
     try {
       const engine = await getEngine()
-      const track = await engine.generate(
-        { artistId, lyrics },
-        (stage) => {
-          if (mountedRef.current && !controller.signal.aborted) {
-            setState((prev) => ({ ...prev, stage }))
-          }
-        },
-        controller.signal,
-      )
+      for (let take = 1; take <= options.takes; take += 1) {
+        if (!live()) return
+        setState((prev) => ({ ...prev, take, stage: 'parsing-lyrics' }))
 
-      if (!mountedRef.current || controller.signal.aborted) {
-        release(track)
-        return
+        const track = await engine.generate(
+          {
+            artistId: options.artistId,
+            lyrics: options.lyrics,
+            instrumental: options.instrumental,
+            seed: newSeed(),
+            take,
+          },
+          (stage) => {
+            if (live()) setState((prev) => ({ ...prev, stage }))
+          },
+          controller.signal,
+        )
+
+        if (!live()) {
+          if (track.audio) URL.revokeObjectURL(track.audio.url)
+          return
+        }
+        onTrackRef.current(track)
       }
-
-      trackRef.current = track
-      setState({ stage: 'done', track, error: null, isRunning: false })
+      setState((prev) => ({ ...prev, stage: 'done', isRunning: false }))
     } catch (error) {
-      if (controller.signal.aborted || !mountedRef.current) return
-      setState({
+      if (!live()) return
+      setState((prev) => ({
+        ...prev,
         stage: 'error',
-        track: null,
         error: error instanceof Error ? error.message : 'GENERATION FAILED',
         isRunning: false,
-      })
+      }))
     }
   }, [])
 
-  const reset = useCallback(() => {
+  const cancel = useCallback(() => {
     abortRef.current?.abort()
-    release(trackRef.current)
-    trackRef.current = null
     setState(INITIAL)
   }, [])
 
-  return { ...state, generate, reset }
+  return { ...state, generate, cancel }
 }

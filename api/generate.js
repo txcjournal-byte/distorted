@@ -4,7 +4,7 @@
  * Same job as server/index.mjs: hold the API key so the browser never sees it.
  * Deploying this is what turns DISTORTED into a URL you just open.
  */
-import { compose, validatePlan } from '../server/compose.mjs'
+import { compose, validateRequest } from '../server/compose.mjs'
 
 export const config = {
   // Generation takes a while; the default function timeout is too short.
@@ -26,15 +26,15 @@ export default async function handler(req, res) {
     return
   }
 
-  const plan = req.body?.plan
-  const problem = validatePlan(plan)
+  const input = req.body
+  const problem = validateRequest(input)
   if (problem) {
     res.status(400).json({ message: problem })
     return
   }
 
   try {
-    const result = await compose(plan, {
+    const result = await compose(input, {
       apiKey,
       modelId: process.env.ELEVENLABS_MODEL_ID ?? 'music_v2',
     })

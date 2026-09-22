@@ -1,90 +1,83 @@
 import type { ArtistSummary, StyleProfile, StyleProfileId } from './types'
 import { toArtistSummary } from './types'
 import { trippieRedd } from './artists/trippie-redd'
+import { laneProfile, type LaneArtist } from './lanes'
 
 /**
  * The registry is the single place a new artist gets plugged in:
  *   1. add `src/style-dna/artists/<slug>.ts` exporting a StyleProfile
- *   2. import it here and push it into STYLE_PROFILES
+ *   2. import it here and push it into RESEARCHED
  * Nothing else in the app needs to change.
  */
-const STYLE_PROFILES: StyleProfile[] = [trippieRedd]
+const RESEARCHED: StyleProfile[] = [trippieRedd]
 
 /**
- * Names that appear in the style grid but have no researched Style DNA yet.
- * They render as locked cards — selectable only once a profile lands above.
- * Tags are genre labels for layout, not claims about a Style DNA.
+ * Artists with no researched Style DNA yet. They play through the generic
+ * descriptors of their trap lane (see lanes.ts) until a researched profile
+ * replaces them. Copy describes the lane's sound, not facts about the artist.
  */
-const UPCOMING: ArtistSummary[] = [
+const LANE_ARTISTS: LaneArtist[] = [
   {
     id: 'chief-keef',
     displayName: 'CHIEF KEEF',
-    tagline: '',
-    quote: '',
-    blurb: '',
+    tagline: 'Drill lane. Sliding 808s and skipping hats.',
+    quote: 'RAW FROM THE START',
+    blurb: 'Drill lane: gliding 808 basslines, triplet-skipping hats, syncopated snares and a cold minor melody.',
     tags: ['DRILL', 'RAW', 'LEGENDARY'],
-    era: '',
-    status: 'draft',
-    portrait: null,
-    available: false,
+    lane: 'drill',
+    key: 'F minor',
   },
   {
     id: 'rio-da-yung-og',
     displayName: 'RIO DA YUNG OG',
-    tagline: '',
-    quote: '',
-    blurb: '',
+    tagline: 'Detroit lane. Off-beat kicks, piano stabs.',
+    quote: 'NO BRAKES',
+    blurb: 'Detroit lane: choppy off-beat kicks, a snappy clap, piano stabs and a punchy 808 with room for fast bars.',
     tags: ['DETROIT', 'DARK', 'STREET'],
-    era: '',
-    status: 'draft',
-    portrait: null,
-    available: false,
+    lane: 'detroit',
+    key: 'A minor',
   },
   {
     id: 'playboi-carti',
     displayName: 'PLAYBOI CARTI',
-    tagline: '',
-    quote: '',
-    blurb: '',
+    tagline: 'Rage lane. Supersaw loops over a blown-out 808.',
+    quote: 'DIGITAL CHAOS',
+    blurb: 'Rage lane: a short bright detuned synth loop, a distorted 808 and fast rolling hats, hard-clipped and digital.',
     tags: ['RAGE', 'EXPERIMENTAL', 'OPIUM'],
-    era: '',
-    status: 'draft',
-    portrait: null,
-    available: false,
+    lane: 'rage',
+    key: 'D major',
   },
   {
     id: 'lil-uzi-vert',
     displayName: 'LIL UZI VERT',
-    tagline: '',
-    quote: '',
-    blurb: '',
+    tagline: 'Melodic lane. Pads, plucks, sung hooks.',
+    quote: 'FLOATING IN THE NOISE',
+    blurb: 'Melodic trap lane: lush pads, a guitar-like pluck, a smooth 808 and gentle rolling hats built for sung hooks.',
     tags: ['MELODIC', 'SPACEY', 'ENERGETIC'],
-    era: '',
-    status: 'draft',
-    portrait: null,
-    available: false,
+    lane: 'melodic',
+    key: 'C# minor',
   },
   {
     id: 'ken-carson',
     displayName: 'KEN CARSON',
-    tagline: '',
-    quote: '',
-    blurb: '',
+    tagline: 'Hard rage lane. Everything in the red.',
+    quote: 'LOUDER THAN LOUD',
+    blurb: 'Hard rage lane: detuned synth stabs, an 808 driven into distortion and relentless rolling hats.',
     tags: ['HARD', 'EXPERIMENTAL', 'CHAOTIC'],
-    era: '',
-    status: 'draft',
-    portrait: null,
-    available: false,
+    lane: 'rage',
+    key: 'G minor',
   },
 ]
+
+const STYLE_PROFILES: StyleProfile[] = [...RESEARCHED, ...LANE_ARTISTS.map(laneProfile)]
 
 const BY_ID = new Map<StyleProfileId, StyleProfile>(
   STYLE_PROFILES.map((profile) => [profile.id, profile]),
 )
 
-/** Public, DNA-free list for the UI: researched artists first, then locked ones. */
+/** Public, DNA-free list for the UI: researched artists first, then lane ones. */
 export function listArtists(): ArtistSummary[] {
-  return [...STYLE_PROFILES.map(toArtistSummary), ...UPCOMING]
+  return STYLE_PROFILES.map(toArtistSummary)
 }
 
 export function getArtistSummary(id: StyleProfileId): ArtistSummary | undefined {

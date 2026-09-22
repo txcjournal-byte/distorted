@@ -87,3 +87,68 @@ export function GlobeIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+export function PlayIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M8 5v14l11-7z" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function PauseIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <rect x="6" y="5" width="4" height="14" fill="currentColor" />
+      <rect x="14" y="5" width="4" height="14" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function SkipIcon({ className, back = false }: IconProps & { back?: boolean }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      aria-hidden="true"
+      style={back ? { transform: 'scaleX(-1)' } : undefined}
+    >
+      <path d="M6 6v12l9-6z" fill="currentColor" />
+      <rect x="16" y="6" width="2.4" height="12" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function HeartIcon({ className, filled = false }: IconProps & { filled?: boolean }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" width="17" height="17" {...base} fill={filled ? 'currentColor' : 'none'} aria-hidden="true">
+      <path d="M10 16.5s-6-3.7-6-8A3.3 3.3 0 0 1 10 6.3 3.3 3.3 0 0 1 16 8.5c0 4.3-6 8-6 8z" />
+    </svg>
+  )
+}
+
+export function DownloadIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" width="17" height="17" {...base} aria-hidden="true">
+      <path d="M10 3v9M6 8.5 10 12.5 14 8.5M4 16h12" />
+    </svg>
+  )
+}
+
+export function TrashIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" width="17" height="17" {...base} aria-hidden="true">
+      <path d="M4 6h12M8 6V4h4v2M5.5 6l.8 10h7.4l.8-10" />
+    </svg>
+  )
+}
+
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" width="16" height="16" {...base} aria-hidden="true">
+      <path d="m5 5 10 10M15 5 5 15" />
+    </svg>
+  )
+}

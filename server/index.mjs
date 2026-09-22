@@ -2,13 +2,13 @@
  * DISTORTED generation proxy.
  *
  * Exists for one reason: the music provider's API key must never reach the
- * browser. The frontend posts a composition plan here; this process adds the
+ * browser. The frontend posts a composition plan or a prompt here; this process adds the
  * key and forwards it to ElevenLabs, then streams the audio back.
  *
  * Run with:  npm run server      (reads .env)
  */
 import { createServer } from 'node:http'
-import { compose, validatePlan } from './compose.mjs'
+import { compose, validateRequest } from './compose.mjs'
 
 try {
   process.loadEnvFile('.env')
@@ -74,24 +74,23 @@ const server = createServer(async (req, res) => {
     return
   }
 
-  let plan
+  let input
   try {
     const raw = await readBody(req)
-    const parsed = JSON.parse(raw.toString('utf8'))
-    plan = parsed?.plan
+    input = JSON.parse(raw.toString('utf8'))
   } catch (error) {
     send(res, 400, { message: error instanceof Error ? error.message : 'BAD REQUEST' })
     return
   }
 
-  const problem = validatePlan(plan)
+  const problem = validateRequest(input)
   if (problem) {
     send(res, 400, { message: problem })
     return
   }
 
   try {
-    const result = await compose(plan, { apiKey: API_KEY, modelId: MODEL_ID })
+    const result = await compose(input, { apiKey: API_KEY, modelId: MODEL_ID })
 
     if (!result.ok) {
       send(res, result.failure.status, result.failure)
@@ -104,7 +103,7 @@ const server = createServer(async (req, res) => {
       'cache-control': 'no-store',
     })
     res.end(result.audio)
-    console.log(`[generate] ok — ${plan.chunks.length} chunks, ${(result.audio.length / 1024).toFixed(0)} kB`)
+    console.log(`[generate] ok — ${input.plan ? `${input.plan.chunks.length} chunks` : 'prompt'}, ${(result.audio.length / 1024).toFixed(0)} kB`)
   } catch (error) {
     console.error('[generate] request failed:', error)
     send(res, 502, { message: 'COULD NOT REACH THE PROVIDER' })

@@ -8,15 +8,26 @@ import {
   WaveIcon,
 } from '../icons'
 
-const NAV = [
-  { label: 'Generate', Icon: WaveIcon },
-  { label: 'My Songs', Icon: PlaylistIcon },
-  { label: 'Artists', Icon: UserIcon },
-  { label: 'Style Library', Icon: LibraryIcon },
-  { label: 'Settings', Icon: SettingsIcon },
+import type { Page } from './nav'
+
+type Target = Page | 'artists' | null
+
+const NAV: { label: string; Icon: typeof WaveIcon; target: Target }[] = [
+  { label: 'Generate', Icon: WaveIcon, target: 'generate' },
+  { label: 'My Songs', Icon: PlaylistIcon, target: 'library' },
+  { label: 'Artists', Icon: UserIcon, target: 'artists' },
+  { label: 'Style Library', Icon: LibraryIcon, target: null },
+  { label: 'Settings', Icon: SettingsIcon, target: null },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  page: Page
+  songCount: number
+  onNavigate: (page: Page) => void
+  onArtists: () => void
+}
+
+export function Sidebar({ page, songCount, onNavigate, onArtists }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
@@ -25,19 +36,27 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar__nav" aria-label="Sections">
-        {NAV.map(({ label, Icon }, index) => (
-          <button
-            key={label}
-            type="button"
-            className={`nav-item ${index === 0 ? 'nav-item--active' : ''}`}
-            aria-current={index === 0 ? 'page' : undefined}
-            // Prototype: only Generate exists. The rest are laid in, not wired.
-            disabled={index !== 0}
-          >
-            <Icon className="nav-item__icon" />
-            <span>{label}</span>
-          </button>
-        ))}
+        {NAV.map(({ label, Icon, target }) => {
+          const active = target === page
+          return (
+            <button
+              key={label}
+              type="button"
+              className={`nav-item ${active ? 'nav-item--active' : ''}`}
+              aria-current={active ? 'page' : undefined}
+              // Style Library and Settings are laid in, not wired yet.
+              disabled={target === null}
+              onClick={() => {
+                if (target === 'artists') onArtists()
+                else if (target) onNavigate(target)
+              }}
+            >
+              <Icon className="nav-item__icon" />
+              <span>{label}</span>
+              {target === 'library' && songCount > 0 && <span className="nav-item__badge">{songCount}</span>}
+            </button>
+          )
+        })}
       </nav>
 
       <div className="sidebar__art" aria-hidden="true">

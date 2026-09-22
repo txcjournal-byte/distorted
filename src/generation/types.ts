@@ -1,9 +1,16 @@
 import type { StyleProfileId } from '../style-dna/types'
 import type { StylePrompt } from './prompt'
+import type { SongRecipe } from './recipe'
 
 export interface GenerateRequest {
   artistId: StyleProfileId
   lyrics: string
+  /** No vocals. Lyrics become optional and only shape the arrangement. */
+  instrumental: boolean
+  /** Picks this take's motif, groove and key. Two takes differ only by seed. */
+  seed: number
+  /** 1-based, shown in the title of each take. */
+  take: number
 }
 
 export interface TrackAudio {
@@ -17,6 +24,7 @@ export interface TrackAudio {
 export interface GeneratedTrack {
   id: string
   title: string
+  artistId: StyleProfileId
   artistName: string
   createdAt: string
   durationSeconds: number
@@ -29,6 +37,13 @@ export interface GeneratedTrack {
   audio: TrackAudio | null
   /** Which engine produced this, shown on the result card. */
   engine: string
+  /** The words this take was made from. */
+  lyrics: string
+  /**
+   * Everything the local renderer needs to rebuild the audio. Lets the
+   * library keep a song without storing its WAV; null for model output.
+   */
+  recipe: SongRecipe | null
   /** Kept for the backend hand-off. Not rendered. */
   debugPrompt: StylePrompt
 }
@@ -90,11 +105,19 @@ const FILLER_WORDS = new Set([
   'to', 'with', 'your', 'i', 'it', 'is', 'was',
 ])
 
+/** Title for a take: first lyric line, or the style for an instrumental. */
+export function titleFor(request: GenerateRequest, styleName: string): string {
+  const fromLyrics = deriveTitle(request.lyrics)
+  if (fromLyrics !== 'UNTITLED') return fromLyrics
+  return `${styleName} TYPE BEAT`
+}
+
 export function deriveTitle(lyrics: string): string {
   const firstLine = lyrics
     .split('\n')
     .map((line) => line.trim())
-    .find((line) => line.length > 0)
+    // Skip section markers like [Hook] — they are structure, not a title.
+    .find((line) => line.length > 0 && !/^\[[^\]]*\]$/.test(line))
 
   if (!firstLine) return 'UNTITLED'
 
