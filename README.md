@@ -12,7 +12,27 @@ chosen artist.
   the Style DNA. No key, no network, no vocals. It is **not** a music model;
   it exists so the flow works everywhere.
 
-## Run
+## Deploy it (no terminal)
+
+The quickest way to have DISTORTED as a URL you just open — on a laptop or a
+phone — with nothing installed:
+
+1. Sign in at [vercel.com](https://vercel.com) with your GitHub account.
+2. **Add New → Project**, import this repository, pick this branch.
+3. Under **Environment Variables** add `ELEVENLABS_API_KEY` with a key from
+   [elevenlabs.io](https://elevenlabs.io) → profile → API keys.
+4. **Deploy.**
+
+That is all the configuration there is. The app asks its own `/api/health` at
+runtime which engine it can use, so no build flags to set: with a key it
+generates real tracks with vocals, without one it falls back to the local
+instrumental. `api/generate.js` holds the key server-side — it never reaches the
+browser.
+
+To add the key later, or change it: project **Settings → Environment
+Variables**, then redeploy.
+
+## Run locally
 
 Needs [Node.js 20 or newer](https://nodejs.org) — take the LTS installer.
 
@@ -23,23 +43,9 @@ npm start
 
 Then open http://localhost:5173. Stop it with Ctrl+C.
 
-That runs the **local** engine: an instrumental rendered in your browser, no
-key and no account needed.
-
-### Real generation with vocals
-
-1. Get an API key at [elevenlabs.io](https://elevenlabs.io) → your profile → API keys.
-2. Copy `.env.example` to `.env` and paste the key in:
-
-   ```
-   ELEVENLABS_API_KEY=your_key_here
-   ```
-
-3. `npm start` again.
-
-`npm start` reads `.env`, picks the `elevenlabs` engine when a key is there and
-`local` when it isn't, and starts the generation proxy alongside Vite. It prints
-which engine it chose. `.env` is gitignored — the key never leaves your machine.
+For real generation, copy `.env.example` to `.env`, put your key in
+`ELEVENLABS_API_KEY`, and run `npm start` again. It prints which engine is
+live. `.env` is gitignored — the key never leaves your machine.
 
 Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`. To run
 the pieces separately: `npm run server` and `npm run dev`.
@@ -66,7 +72,7 @@ src/
     artists/
       trippie-redd.ts     DRAFT profile data
   generation/
-    prompt.ts             StyleProfile + lyrics -> model payload
+    prompt.ts             StyleProfile + lyrics -> model payload / composition plan
     types.ts              MusicEngine interface and track types
     engine.ts             picks the engine from VITE_ENGINE
     engines/local.ts      renders audible audio from the DNA (default)
@@ -122,6 +128,17 @@ copyrighted references and returns a suggested rephrasing, which the proxy
 passes through to the UI. The plan carries sonic descriptors only, which is
 exactly what the Style DNA exists to provide. `compileCompositionPlan` also
 filters the artist's own name out of the style lists as a backstop.
+
+### Where the key lives
+
+`server/compose.mjs` makes the provider call. Two thin wrappers use it so both
+ways of running behave identically:
+
+- `server/index.mjs` — the local proxy, started by `npm start`
+- `api/generate.js` — the serverless function used by a deployment
+
+`api/health.js` reports whether a key is configured; the frontend uses it to
+pick its engine at runtime.
 
 ### Adding another provider
 

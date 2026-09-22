@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { GenerateBar } from './components/GenerateBar'
 import { GenerationConsole } from './components/GenerationConsole'
 import { GrainOverlay } from './components/GrainOverlay'
@@ -10,6 +10,7 @@ import { TrackResult } from './components/TrackResult'
 import { TrendingStyles } from './components/TrendingStyles'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
+import { getEngineInfo, type EngineInfo } from './generation/engine'
 import { useGeneration } from './hooks/useGeneration'
 import { getArtistSummary, getDefaultArtistId, listArtists, listGenres } from './style-dna/registry'
 import type { StyleProfileId } from './style-dna/types'
@@ -23,8 +24,20 @@ export default function App() {
   const [genre, setGenre] = useState('')
   const [lyrics, setLyrics] = useState('')
 
+  const [engine, setEngine] = useState<EngineInfo | null>(null)
   const trendingRef = useRef<HTMLDivElement>(null)
   const { stage, track, error, isRunning, generate, reset } = useGeneration()
+
+  // Which engine is available depends on the deployment, so ask at runtime.
+  useEffect(() => {
+    let active = true
+    void getEngineInfo().then((info) => {
+      if (active) setEngine(info)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const visibleArtists = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -79,7 +92,12 @@ export default function App() {
 
           <LyricsSection value={lyrics} onChange={setLyrics} disabled={isRunning} />
 
-          <GenerateBar onClick={handleGenerate} disabled={!canGenerate} busy={isRunning} />
+          <GenerateBar
+            onClick={handleGenerate}
+            disabled={!canGenerate}
+            busy={isRunning}
+            engine={engine}
+          />
 
           {isRunning && <GenerationConsole stage={stage} />}
           {error && <p className="error">{error}</p>}

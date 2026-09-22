@@ -1224,3 +1224,16 @@ textarea {
     animation: none !important;
   }
 }
+
+.generate__engine {
+  margin: -6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  color: var(--grey-dim);
+  text-transform: uppercase;
+}
+
+.generate__engine--live {
+  color: var(--purple-hot);
+}

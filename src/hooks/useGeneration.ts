@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  musicEngine,
+  getEngine,
   type GeneratedTrack,
   type GenerationStage,
 } from '../generation/engine'
@@ -51,7 +51,8 @@ export function useGeneration() {
     setState({ stage: 'parsing-lyrics', track: null, error: null, isRunning: true })
 
     try {
-      const track = await musicEngine.generate(
+      const engine = await getEngine()
+      const track = await engine.generate(
         { artistId, lyrics },
         (stage) => {
           if (mountedRef.current && !controller.signal.aborted) {

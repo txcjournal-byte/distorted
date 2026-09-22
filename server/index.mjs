@@ -8,6 +8,7 @@
  * Run with:  npm run server      (reads .env)
  */
 import { createServer } from 'node:http'
+import { compose, validatePlan } from './compose.mjs'
 
 try {
   process.loadEnvFile('.env')
@@ -18,7 +19,6 @@ try {
 const PORT = Number(process.env.PORT ?? 8787)
 const API_KEY = process.env.ELEVENLABS_API_KEY ?? ''
 const MODEL_ID = process.env.ELEVENLABS_MODEL_ID ?? 'music_v2'
-const COMPOSE_URL = 'https://api.elevenlabs.io/v1/music/compose'
 const MAX_BODY_BYTES = 1_000_000
 
 function send(res, status, payload, headers = {}) {
@@ -47,35 +47,6 @@ function readBody(req) {
     req.on('end', () => resolve(Buffer.concat(chunks)))
     req.on('error', reject)
   })
-}
-
-/** Turns a provider failure into something the UI can show verbatim. */
-function describeFailure(status, raw) {
-  let detail
-  try {
-    detail = JSON.parse(raw)
-  } catch {
-    detail = null
-  }
-
-  const status_ = detail?.detail?.status ?? detail?.status
-  const suggestion =
-    detail?.detail?.prompt_suggestion ?? detail?.detail?.composition_plan_suggestion ?? null
-
-  if (status === 401) return { status: 401, message: 'API KEY REJECTED — CHECK ELEVENLABS_API_KEY' }
-  if (status === 429) return { status: 429, message: 'RATE LIMITED — TRY AGAIN SHORTLY' }
-
-  if (status_ === 'bad_prompt' || status_ === 'bad_composition_plan') {
-    return {
-      status: 400,
-      message: 'PROVIDER REJECTED THE STYLE AS COPYRIGHTED — ADJUST THE STYLE DNA SEEDS',
-      suggestion,
-    }
-  }
-
-  if (status === 422) return { status: 422, message: 'PROVIDER REJECTED THE PLAN — INVALID PARAMETERS', detail }
-
-  return { status: 502, message: `PROVIDER ERROR ${status}`, detail }
 }
 
 const server = createServer(async (req, res) => {
@@ -113,37 +84,27 @@ const server = createServer(async (req, res) => {
     return
   }
 
-  if (!plan || !Array.isArray(plan.chunks) || plan.chunks.length === 0) {
-    send(res, 400, { message: 'MISSING COMPOSITION PLAN' })
+  const problem = validatePlan(plan)
+  if (problem) {
+    send(res, 400, { message: problem })
     return
   }
 
   try {
-    const upstream = await fetch(COMPOSE_URL, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': API_KEY,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ composition_plan: plan, model_id: MODEL_ID }),
-    })
+    const result = await compose(plan, { apiKey: API_KEY, modelId: MODEL_ID })
 
-    if (!upstream.ok) {
-      const raw = await upstream.text()
-      const failure = describeFailure(upstream.status, raw)
-      console.error(`[generate] provider ${upstream.status}: ${raw.slice(0, 500)}`)
-      send(res, failure.status, failure)
+    if (!result.ok) {
+      send(res, result.failure.status, result.failure)
       return
     }
 
-    const audio = Buffer.from(await upstream.arrayBuffer())
     res.writeHead(200, {
-      'content-type': upstream.headers.get('content-type') ?? 'audio/mpeg',
-      'content-length': String(audio.length),
+      'content-type': result.contentType,
+      'content-length': String(result.audio.length),
       'cache-control': 'no-store',
     })
-    res.end(audio)
-    console.log(`[generate] ok — ${plan.chunks.length} chunks, ${(audio.length / 1024).toFixed(0)} kB`)
+    res.end(result.audio)
+    console.log(`[generate] ok — ${plan.chunks.length} chunks, ${(result.audio.length / 1024).toFixed(0)} kB`)
   } catch (error) {
     console.error('[generate] request failed:', error)
     send(res, 502, { message: 'COULD NOT REACH THE PROVIDER' })
