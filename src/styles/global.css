@@ -998,22 +998,85 @@ textarea {
   color: var(--purple-hot);
 }
 
+.result__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  /* Also used as an <a>, which would otherwise take the UA link colour. */
+  color: var(--white);
+  text-decoration: none;
+}
+
+.player {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.player__transport {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--purple-hot), #8b2fe6);
+  color: #ffffff;
+  cursor: pointer;
+  transition: filter 0.18s, transform 0.12s;
+}
+
+.player__transport:hover {
+  filter: brightness(1.12);
+}
+
+.player__transport:active {
+  transform: scale(0.96);
+}
+
+.player__time {
+  grid-column: 2;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--grey);
+}
+
 .waveform {
   display: flex;
   align-items: flex-end;
   gap: 2px;
+  width: 100%;
   height: 96px;
-  margin: 24px 0;
   padding: 0 2px;
+  border: 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+}
+
+.waveform:disabled {
+  cursor: default;
 }
 
 .waveform__bar {
   flex: 1 1 0;
   min-width: 2px;
-  background: linear-gradient(180deg, var(--white), var(--purple-deep));
-  opacity: 0.8;
+  background: linear-gradient(180deg, #55545e, #2a2a33);
+  opacity: 0.9;
+  transition: background 0.1s;
+}
+
+.waveform__bar--played {
+  background: linear-gradient(180deg, var(--white), var(--purple));
 }
 
 .result__specs {
@@ -1135,6 +1198,12 @@ textarea {
 }
 
 @media (max-width: 560px) {
+  .player {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .player__time {
+    grid-column: 1;
+  }
   .waveform {
     gap: 1px;
   }

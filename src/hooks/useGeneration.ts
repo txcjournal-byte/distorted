@@ -20,16 +20,24 @@ const INITIAL: GenerationState = {
   isRunning: false,
 }
 
+/** Rendered audio lives in an object URL; drop it or the blob leaks. */
+function release(track: GeneratedTrack | null) {
+  if (track?.audio) URL.revokeObjectURL(track.audio.url)
+}
+
 export function useGeneration() {
   const [state, setState] = useState<GenerationState>(INITIAL)
   const abortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
+  const trackRef = useRef<GeneratedTrack | null>(null)
 
   useEffect(() => {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
       abortRef.current?.abort()
+      release(trackRef.current)
+      trackRef.current = null
     }
   }, [])
 
@@ -38,6 +46,8 @@ export function useGeneration() {
     const controller = new AbortController()
     abortRef.current = controller
 
+    release(trackRef.current)
+    trackRef.current = null
     setState({ stage: 'parsing-lyrics', track: null, error: null, isRunning: true })
 
     try {
@@ -50,7 +60,13 @@ export function useGeneration() {
         },
         controller.signal,
       )
-      if (!mountedRef.current || controller.signal.aborted) return
+
+      if (!mountedRef.current || controller.signal.aborted) {
+        release(track)
+        return
+      }
+
+      trackRef.current = track
       setState({ stage: 'done', track, error: null, isRunning: false })
     } catch (error) {
       if (controller.signal.aborted || !mountedRef.current) return
@@ -65,6 +81,8 @@ export function useGeneration() {
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
+    release(trackRef.current)
+    trackRef.current = null
     setState(INITIAL)
   }, [])
 

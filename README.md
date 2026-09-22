@@ -3,9 +3,11 @@
 Frontend prototype. Generate a song from your own lyrics in the style of a
 chosen artist.
 
-**Phase 1 — this build.** UI, flow and the internal Style DNA architecture only.
-No music AI is connected and no audio is produced: `GENERATE SONG` runs a mock
-engine that fakes the render stages and returns a stub track card.
+**This build.** `GENERATE SONG` produces real, audible audio — rendered in the
+browser from the Style DNA, with no API key and no network. It is a procedural
+instrumental, **not a music model**, and it cannot sing your lyrics. Its job is
+to make the whole flow testable and to show what the Style DNA parameters
+actually drive. A real music model still has to be connected.
 
 ## Run
 
@@ -16,13 +18,17 @@ npm run dev      # http://localhost:5173
 
 Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`.
 
+Set `VITE_ENGINE` (see `.env.example`) to pick the engine: `local` (default,
+audible) or `mock` (staged, silent).
+
 ## Flow
 
 1. Pick a style reference (currently only **TRIPPIE REDD**, preselected).
 2. Paste your lyrics.
 3. Hit `GENERATE SONG`.
 4. The app silently loads that artist's hidden Style DNA profile, compiles it
-   into a model payload, and — for now — mocks the render.
+   into a model payload, renders audio, and hands back a playable track with a
+   waveform drawn from the real peaks, a seek bar and a WAV download.
 
 The Style DNA is never shown on screen. The UI only ever receives an
 `ArtistSummary` (name, tagline, tags, era).
@@ -38,7 +44,13 @@ src/
       trippie-redd.ts     DRAFT profile data
   generation/
     prompt.ts             StyleProfile + lyrics -> model payload
-    engine.ts             MusicEngine interface + MockMusicEngine
+    types.ts              MusicEngine interface and track types
+    engine.ts             picks the engine from VITE_ENGINE
+    engines/local.ts      renders audible audio from the DNA (default)
+    engines/mock.ts       staged, silent
+    audio/render.ts       the Web Audio renderer
+    audio/theory.ts       key/scale helpers
+    audio/wav.ts          WAV encoding and waveform peaks
   hooks/useGeneration.ts  stage/track/error state for the UI
   components/             presentation only, no DNA access
 ```
@@ -51,12 +63,36 @@ src/
 Nothing else changes — the selector, the prompt compiler and the engine all read
 from the registry.
 
+### The local renderer
+
+`src/generation/audio/render.ts` turns the profile's tempo, key, arrangement,
+distortion and saturation into an instrumental: half-time kick and clap, fast
+rolling hats, a distorted gliding 808, and a detuned saw lead playing a motif
+generated from the seed. Nothing is sampled or lifted from any record.
+
+It renders one short cell per section kind and tiles them — rage is loop-driven
+anyway, and one graph holding every hit takes far too long to render. Peak
+control happens on the finished buffer, because Web Audio's
+`DynamicsCompressorNode` applies its own makeup gain and cannot act as a
+limiter here.
+
+Seeded by the lyrics, so the same words always produce the same track.
+
 ### Connecting a real music AI later
 
-`src/generation/engine.ts` defines the `MusicEngine` interface and exports a
-single `musicEngine` instance. Implement the interface against a real API and
-swap that one export; `compileStylePrompt` in `prompt.ts` already produces the
-prompt, negative prompt, lyrics and parameters such a backend needs.
+`src/generation/types.ts` defines the `MusicEngine` interface; `engine.ts` picks
+the implementation. Add a provider engine to `ENGINES` and select it with
+`VITE_ENGINE`. `compileStylePrompt` already produces the prompt, negative
+prompt, lyrics and parameters such a backend needs.
+
+Two things that implementation must respect:
+
+- **The API key cannot ship to the browser.** The provider engine should call
+  your own server, which holds the key and proxies the request.
+- **Do not send the artist's name.** Most providers reject prompts naming a real
+  artist. The compiled prompt deliberately carries sonic attributes only
+  (detuned supersaw lead, distorted 808, half-time groove, tempo, key) — which
+  is exactly why the Style DNA research matters.
 
 ## Status of the data
 
