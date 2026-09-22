@@ -22,7 +22,7 @@ export function TrendingStyles({ artists, selectedId, onSelect, disabled }: Tren
       {artists.length === 0 ? (
         <p className="trending__empty">NO STYLES MATCH THAT SEARCH.</p>
       ) : (
-        <div className="trending__grid" role="radiogroup" aria-label="Artist style">
+        <div className="trending__grid" role="radiogroup" aria-label="Trap style">
           {artists.map((artist) => {
             const selected = artist.id === selectedId
             return (

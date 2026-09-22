@@ -4,7 +4,7 @@
  * Same job as server/index.mjs: hold the API key so the browser never sees it.
  * Deploying this is what turns DISTORTED into a URL you just open.
  */
-import { compose, validateRequest } from '../server/compose.mjs'
+import { ACCESS_DENIED, accessGranted, compose, validateRequest } from '../server/compose.mjs'
 
 export const config = {
   // Generation takes a while; the default function timeout is too short.
@@ -23,6 +23,11 @@ export default async function handler(req, res) {
     res.status(503).json({
       message: 'NO PROVIDER KEY — ADD ELEVENLABS_API_KEY IN THE PROJECT SETTINGS AND REDEPLOY',
     })
+    return
+  }
+
+  if (!accessGranted(req.headers['x-access-code'])) {
+    res.status(401).json(ACCESS_DENIED)
     return
   }
 

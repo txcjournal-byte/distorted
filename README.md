@@ -21,7 +21,8 @@ phone — with nothing installed:
 1. Sign in at [vercel.com](https://vercel.com) with your GitHub account.
 2. **Add New → Project**, import this repository, pick this branch.
 3. Under **Environment Variables** add `ELEVENLABS_API_KEY` with a key from
-   [elevenlabs.io](https://elevenlabs.io) → profile → API keys.
+   [elevenlabs.io](https://elevenlabs.io) → profile → API keys, and
+   `ACCESS_CODE` so strangers cannot spend your credits (see below).
 4. **Deploy.**
 
 That is all the configuration there is. The app asks its own `/api/health` at
@@ -53,8 +54,8 @@ the pieces separately: `npm run server` and `npm run dev`.
 
 ## Flow
 
-1. Pick a style — six trap artists, each playing through a trap lane
-   (rage, drill, detroit, melodic…).
+1. Pick a trap style — rage, Chicago drill, Detroit, melodic, dark, ATL,
+   phonk or plugg.
 2. Paste your lyrics, or switch on **INSTRUMENTAL** (lyrics optional; `[Hook]` /
    `[Verse]` markers still shape the beat). **+ STRUCTURE** inserts the markers.
 3. Hit `GENERATE SONG`. Every press makes **two takes** with different seeds —
@@ -74,20 +75,20 @@ plugg, phonk, melodic and Detroit — each with prompt descriptors for a music
 model and a `sound` block for the local renderer (drum grammar, lead voice,
 808 drive/glide, hat rolls).
 
-Every style profile names its lane. Trippie Redd keeps the researched rage
-profile; the other five artists have no researched DNA yet, so
-`src/style-dna/lanes.ts` builds their profiles from the lane's generic
-descriptors, marked `unverified` throughout. A researched profile in
-`artists/` replaces one of these without touching anything else.
+The grid shows eight styles, named by their sound. DISTORTED is meant to be
+public, and offering "the style of <artist>" to the public trades on a real
+person's name and likeness, so no card, prompt or copy names one. RAGE keeps
+the researched rage-era profile (`artists/trippie-redd.ts`, re-labelled in
+`registry.ts`); the other seven play through their lane's generic descriptors
+via `src/style-dna/lanes.ts`, marked `unverified` throughout.
 
-| Artist | Lane |
-| --- | --- |
-| Trippie Redd | rage (researched profile) |
-| Chief Keef | drill |
-| Rio Da Yung OG | detroit |
-| Playboi Carti | rage |
-| Lil Uzi Vert | melodic |
-| Ken Carson | rage |
+### Locking generation
+
+Every generation is billed to the operator's ElevenLabs key. Set
+`ACCESS_CODE` (Vercel → Settings → Environment Variables, then redeploy) and
+the server refuses to generate without it; the page shows an ACCESS CODE
+field above the button and remembers what was typed. Unset means open to
+anyone with the link. This is a stopgap until accounts and per-user credits.
 
 ### My Songs
 

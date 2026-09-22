@@ -2,6 +2,25 @@
  * Provider call, shared by the local proxy (server/index.mjs) and the
  * serverless function (api/generate.js) so both behave identically.
  */
+import { timingSafeEqual } from 'node:crypto'
+
+/**
+ * Every generation is billed to the operator's provider key, so a public
+ * deployment can lock generation behind ACCESS_CODE. Unset means open.
+ */
+export function accessRequired() {
+  return (process.env.ACCESS_CODE ?? '').trim() !== ''
+}
+
+export function accessGranted(provided) {
+  const expected = (process.env.ACCESS_CODE ?? '').trim()
+  if (expected === '') return true
+  const given = Buffer.from(String(provided ?? '').trim())
+  const wanted = Buffer.from(expected)
+  return given.length === wanted.length && timingSafeEqual(given, wanted)
+}
+
+export const ACCESS_DENIED = { code: 'access_required', message: 'ACCESS CODE REQUIRED OR WRONG' }
 
 // POST /v1/music takes either `prompt` or `composition_plan` (see the
 // official @elevenlabs/elevenlabs-js SDK, music.compose).

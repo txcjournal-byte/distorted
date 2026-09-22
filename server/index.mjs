@@ -8,7 +8,7 @@
  * Run with:  npm run server      (reads .env)
  */
 import { createServer } from 'node:http'
-import { compose, validateRequest } from './compose.mjs'
+import { ACCESS_DENIED, accessGranted, accessRequired, compose, validateRequest } from './compose.mjs'
 
 try {
   process.loadEnvFile('.env')
@@ -53,7 +53,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
 
   if (url.pathname === '/api/health') {
-    send(res, 200, { ok: true, provider: 'elevenlabs', model: MODEL_ID, keyConfigured: API_KEY !== '' })
+    send(res, 200, { ok: true, provider: 'elevenlabs', model: MODEL_ID, keyConfigured: API_KEY !== '', accessRequired: accessRequired() })
     return
   }
 
@@ -71,6 +71,11 @@ const server = createServer(async (req, res) => {
     send(res, 503, {
       message: 'NO PROVIDER KEY — SET ELEVENLABS_API_KEY IN .env AND RESTART THE SERVER',
     })
+    return
+  }
+
+  if (!accessGranted(req.headers['x-access-code'])) {
+    send(res, 401, ACCESS_DENIED)
     return
   }
 

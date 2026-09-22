@@ -4,78 +4,114 @@ import { trippieRedd } from './artists/trippie-redd'
 import { laneProfile, type LaneArtist } from './lanes'
 
 /**
- * The registry is the single place a new artist gets plugged in:
- *   1. add `src/style-dna/artists/<slug>.ts` exporting a StyleProfile
- *   2. import it here and push it into RESEARCHED
- * Nothing else in the app needs to change.
+ * The registry is the single place a style gets plugged in.
+ *
+ * DISTORTED is public, so styles are named by their sound, never by a real
+ * person: offering "the style of <artist>" to the public trades on someone's
+ * name and likeness. Every profile carries sonic descriptors only.
  */
-const RESEARCHED: StyleProfile[] = [trippieRedd]
 
 /**
- * Artists with no researched Style DNA yet. They play through the generic
- * descriptors of their trap lane (see lanes.ts) until a researched profile
- * replaces them. Copy describes the lane's sound, not facts about the artist.
+ * RAGE keeps the researched rage-era profile. Its research names the records
+ * it was drawn from; nothing public-facing does.
  */
-const LANE_ARTISTS: LaneArtist[] = [
+const rage: StyleProfile = {
+  ...trippieRedd,
+  id: 'rage',
+  displayName: 'RAGE',
+  tagline: 'Detuned synth loops over an 808 pushed into the red.',
+  quote: 'EMOTION IN CHAOS',
+  blurb:
+    'Bright detuned synth leads, distorted 808s, fast rolling hi-hats and shouted, heavily tuned hooks — digital, hard-clipped, loop-driven.',
+  tags: ['RAGE', 'SYNTH', 'CHAOTIC'],
+  era: 'RAGE',
+  origin: '',
+}
+
+/**
+ * The other lanes play through the generic descriptors in src/trap/styles.ts
+ * (see lanes.ts) until a researched profile replaces them.
+ */
+const LANE_STYLES: LaneArtist[] = [
   {
-    id: 'chief-keef',
-    displayName: 'CHIEF KEEF',
-    tagline: 'Drill lane. Sliding 808s and skipping hats.',
+    id: 'drill',
+    displayName: 'CHICAGO DRILL',
+    tagline: 'Sliding 808s and skipping hats.',
     quote: 'RAW FROM THE START',
-    blurb: 'Drill lane: gliding 808 basslines, triplet-skipping hats, syncopated snares and a cold minor melody.',
-    tags: ['DRILL', 'RAW', 'LEGENDARY'],
+    blurb: 'Gliding 808 basslines, triplet-skipping hats, syncopated snares and a cold minor melody.',
+    tags: ['DRILL', 'RAW', 'COLD'],
     lane: 'drill',
     key: 'F minor',
   },
   {
-    id: 'rio-da-yung-og',
-    displayName: 'RIO DA YUNG OG',
-    tagline: 'Detroit lane. Off-beat kicks, piano stabs.',
+    id: 'detroit',
+    displayName: 'DETROIT',
+    tagline: 'Off-beat kicks, piano stabs.',
     quote: 'NO BRAKES',
-    blurb: 'Detroit lane: choppy off-beat kicks, a snappy clap, piano stabs and a punchy 808 with room for fast bars.',
+    blurb: 'Choppy off-beat kicks, a snappy clap, piano stabs and a punchy 808 with room for fast bars.',
     tags: ['DETROIT', 'DARK', 'STREET'],
     lane: 'detroit',
     key: 'A minor',
   },
   {
-    id: 'playboi-carti',
-    displayName: 'PLAYBOI CARTI',
-    tagline: 'Rage lane. Supersaw loops over a blown-out 808.',
-    quote: 'DIGITAL CHAOS',
-    blurb: 'Rage lane: a short bright detuned synth loop, a distorted 808 and fast rolling hats, hard-clipped and digital.',
-    tags: ['RAGE', 'EXPERIMENTAL', 'OPIUM'],
-    lane: 'rage',
-    key: 'D major',
-  },
-  {
-    id: 'lil-uzi-vert',
-    displayName: 'LIL UZI VERT',
-    tagline: 'Melodic lane. Pads, plucks, sung hooks.',
+    id: 'melodic',
+    displayName: 'MELODIC TRAP',
+    tagline: 'Pads, plucks, sung hooks.',
     quote: 'FLOATING IN THE NOISE',
-    blurb: 'Melodic trap lane: lush pads, a guitar-like pluck, a smooth 808 and gentle rolling hats built for sung hooks.',
-    tags: ['MELODIC', 'SPACEY', 'ENERGETIC'],
+    blurb: 'Lush pads, a guitar-like pluck, a smooth 808 and gentle rolling hats built for sung hooks.',
+    tags: ['MELODIC', 'SPACEY', 'EMOTIONAL'],
     lane: 'melodic',
     key: 'C# minor',
   },
   {
-    id: 'ken-carson',
-    displayName: 'KEN CARSON',
-    tagline: 'Hard rage lane. Everything in the red.',
-    quote: 'LOUDER THAN LOUD',
-    blurb: 'Hard rage lane: detuned synth stabs, an 808 driven into distortion and relentless rolling hats.',
-    tags: ['HARD', 'EXPERIMENTAL', 'CHAOTIC'],
-    lane: 'rage',
+    id: 'dark',
+    displayName: 'DARK TRAP',
+    tagline: 'Minor keys and a slow, menacing crawl.',
+    quote: 'COLD AS NIGHT',
+    blurb: 'Minor piano-like keys, eerie pads, a distorted 808 and hats that leave room for the dark.',
+    tags: ['DARK', 'EERIE', 'HEAVY'],
+    lane: 'dark',
     key: 'G minor',
+  },
+  {
+    id: 'atl',
+    displayName: 'ATL TRAP',
+    tagline: 'The blueprint. Rolling hats, booming 808.',
+    quote: 'WHERE IT STARTED',
+    blurb: 'Half-time snare, 16th hats that roll into every turn, a long booming 808 and a dark bell loop.',
+    tags: ['CLASSIC', 'HARD', 'SOUTHERN'],
+    lane: 'atl',
+    key: 'E minor',
+  },
+  {
+    id: 'phonk',
+    displayName: 'PHONK',
+    tagline: 'Cowbells, grime and a slammed 808.',
+    quote: 'NIGHT DRIVE',
+    blurb: 'A cowbell melody, a heavily distorted 808, crunchy drums and a gritty drifting feel.',
+    tags: ['COWBELL', 'GRITTY', 'DRIFT'],
+    lane: 'phonk',
+    key: 'D minor',
+  },
+  {
+    id: 'plugg',
+    displayName: 'PLUGG',
+    tagline: 'Soft, floaty, video-game sweet.',
+    quote: 'WEIGHTLESS',
+    blurb: 'Glassy plucks and bells in a major key, a clean round 808 and light bouncy drums.',
+    tags: ['DREAMY', 'SOFT', 'BOUNCY'],
+    lane: 'plugg',
+    key: 'F major',
   },
 ]
 
-const STYLE_PROFILES: StyleProfile[] = [...RESEARCHED, ...LANE_ARTISTS.map(laneProfile)]
+const STYLE_PROFILES: StyleProfile[] = [rage, ...LANE_STYLES.map(laneProfile)]
 
 const BY_ID = new Map<StyleProfileId, StyleProfile>(
   STYLE_PROFILES.map((profile) => [profile.id, profile]),
 )
 
-/** Public, DNA-free list for the UI: researched artists first, then lane ones. */
+/** Public, DNA-free list for the UI. */
 export function listArtists(): ArtistSummary[] {
   return STYLE_PROFILES.map(toArtistSummary)
 }

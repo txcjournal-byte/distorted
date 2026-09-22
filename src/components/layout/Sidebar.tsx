@@ -15,7 +15,7 @@ type Target = Page | 'artists' | null
 const NAV: { label: string; Icon: typeof WaveIcon; target: Target }[] = [
   { label: 'Generate', Icon: WaveIcon, target: 'generate' },
   { label: 'My Songs', Icon: PlaylistIcon, target: 'library' },
-  { label: 'Artists', Icon: UserIcon, target: 'artists' },
+  { label: 'Styles', Icon: UserIcon, target: 'artists' },
   { label: 'Style Library', Icon: LibraryIcon, target: null },
   { label: 'Settings', Icon: SettingsIcon, target: null },
 ]

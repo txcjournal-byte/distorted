@@ -16,8 +16,8 @@ export function StyleSearch({ query, onQueryChange, genre, onGenreChange, genres
         <input
           type="search"
           value={query}
-          placeholder="Search artists..."
-          aria-label="Search artists"
+          placeholder="Search styles..."
+          aria-label="Search styles"
           onChange={(event) => onQueryChange(event.target.value)}
         />
       </div>

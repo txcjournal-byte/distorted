@@ -6,7 +6,7 @@ export function Hero() {
       <p className="hero__scrawl" aria-hidden="true">
         Real
         <br />
-        artists
+        trap
         <br />
         real
         <br />
@@ -17,7 +17,7 @@ export function Hero() {
 
       <DistressedTitle text="DISTORTED" uid="hero" className="hero__logo" scratches />
 
-      <h1 className="hero__headline">GENERATE SONG BY ARTIST STYLE</h1>
+      <h1 className="hero__headline">GENERATE TRAP SONGS BY STYLE</h1>
       <p className="hero__chip">DIFFERENT MINDS · SAME NOISE</p>
     </section>
   )

@@ -557,7 +557,7 @@ textarea {
 
 .trending__grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -992,7 +992,7 @@ textarea {
 
 @media (max-width: 1180px) {
   .trending__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -1653,4 +1653,39 @@ textarea {
   .spinner {
     animation-duration: 2s;
   }
+}
+
+/* ---------------------------------------------------------- access code */
+
+.access {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(430px, 100%);
+}
+
+.access__label {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--grey);
+}
+
+.access__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(12, 12, 16, 0.75);
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
+.access__input:focus {
+  border-color: rgba(168, 85, 247, 0.55);
 }

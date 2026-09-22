@@ -1,4 +1,5 @@
 import { getStyleProfile } from '../../style-dna/registry'
+import { currentAccessCode } from '../access'
 import { peaks } from '../audio/wav'
 import { compileCompositionPlan, compileInstrumentalPrompt, compileStylePrompt } from '../prompt'
 import {
@@ -13,6 +14,7 @@ const ENDPOINT = '/api/generate'
 const WAVEFORM_BARS = 96
 
 interface FailureBody {
+  code?: string
   message?: string
   suggestion?: string | null
 }
@@ -54,7 +56,7 @@ export class ElevenLabsEngine implements MusicEngine {
 
     const response = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-access-code': currentAccessCode() },
       body: JSON.stringify(body),
       signal,
     })
@@ -65,6 +67,9 @@ export class ElevenLabsEngine implements MusicEngine {
         failure = (await response.json()) as FailureBody
       } catch {
         // Non-JSON error body; fall through to the generic message.
+      }
+      if (failure.code === 'access_required') {
+        throw new Error('WRONG OR MISSING ACCESS CODE — ENTER IT ABOVE THE BUTTON')
       }
       const suffix = failure.suggestion ? ` — TRY: ${failure.suggestion}` : ''
       throw new Error(`${failure.message ?? `GENERATION FAILED (${response.status})`}${suffix}`)

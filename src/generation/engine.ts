@@ -30,13 +30,18 @@ export interface EngineInfo {
   vocals: boolean
   /** Whether it produces audio at all. */
   audio: boolean
+  /** Whether the server wants an access code before it generates. */
+  accessRequired: boolean
 }
+
+let accessRequired = false
 
 function describe(engine: MusicEngine): EngineInfo {
   return {
     name: engine.name,
     vocals: engine.name === 'elevenlabs',
     audio: engine.name !== 'mock',
+    accessRequired: engine.name === 'elevenlabs' && accessRequired,
   }
 }
 
@@ -60,7 +65,8 @@ export function getEngine(): Promise<MusicEngine> {
     try {
       const response = await fetch('/api/health', { headers: { accept: 'application/json' } })
       if (response.ok) {
-        const health = (await response.json()) as { keyConfigured?: boolean }
+        const health = (await response.json()) as { keyConfigured?: boolean; accessRequired?: boolean }
+        accessRequired = Boolean(health.accessRequired)
         if (health.keyConfigured) return ENGINES.elevenlabs()
       }
     } catch {
