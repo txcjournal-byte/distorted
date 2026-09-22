@@ -14,26 +14,35 @@ chosen artist.
 
 ## Run
 
+Needs [Node.js 20 or newer](https://nodejs.org) — take the LTS installer.
+
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm start
 ```
 
-Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`.
+Then open http://localhost:5173. Stop it with Ctrl+C.
 
-### Real generation
+That runs the **local** engine: an instrumental rendered in your browser, no
+key and no account needed.
 
-```bash
-cp .env.example .env          # then put your key in ELEVENLABS_API_KEY
-npm run server                # generation proxy on :8787
-VITE_ENGINE=elevenlabs npm run dev
-```
+### Real generation with vocals
 
-Two processes: Vite proxies `/api` to the generation server, which holds the
-key. Get a key at elevenlabs.io → profile → API keys.
+1. Get an API key at [elevenlabs.io](https://elevenlabs.io) → your profile → API keys.
+2. Copy `.env.example` to `.env` and paste the key in:
 
-`VITE_ENGINE` picks the engine — `elevenlabs`, `local` (default) or `mock`
-(staged, silent). See `.env.example`.
+   ```
+   ELEVENLABS_API_KEY=your_key_here
+   ```
+
+3. `npm start` again.
+
+`npm start` reads `.env`, picks the `elevenlabs` engine when a key is there and
+`local` when it isn't, and starts the generation proxy alongside Vite. It prints
+which engine it chose. `.env` is gitignored — the key never leaves your machine.
+
+Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`. To run
+the pieces separately: `npm run server` and `npm run dev`.
 
 ## Flow
 

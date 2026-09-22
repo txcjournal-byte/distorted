@@ -150,6 +150,15 @@ const server = createServer(async (req, res) => {
   }
 })
 
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`\nPort ${PORT} is already in use — another copy of the server is probably running.`)
+    console.error(`Stop it, or set a different PORT in .env.\n`)
+    process.exit(1)
+  }
+  throw error
+})
+
 server.listen(PORT, () => {
   console.log(`DISTORTED generation proxy on http://localhost:${PORT}`)
   console.log(`provider: elevenlabs · model: ${MODEL_ID} · key: ${API_KEY ? 'configured' : 'MISSING'}`)
