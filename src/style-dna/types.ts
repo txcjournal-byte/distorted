@@ -1,82 +1,98 @@
 /**
  * STYLE DNA — internal data model.
  *
- * A StyleProfile is never shown to the user. The UI only exposes the
- * `ArtistSummary` (name, tagline, tags). Everything under `dna` is the
- * hidden fingerprint that will later be compiled into a prompt / conditioning
- * payload for a real music AI backend.
+ * A StyleProfile is never shown to the user. The UI only ever receives an
+ * `ArtistSummary`. Everything under `dna` is the hidden fingerprint that gets
+ * compiled into a prompt / conditioning payload for a music model later.
  *
- * Current profiles are DRAFT data written from general impressions only.
- * Real research lands in a later phase — see `research` on each profile.
+ * Evidence discipline: every DNA section carries an `Evidence` record saying
+ * how well sourced it is. Nothing may be stated as fact that research did not
+ * support — unsupported values are marked 'unverified' and are meant to be
+ * replaced, not trusted.
  */
 
 export type StyleProfileId = string
 
-/** How trustworthy the data in a profile is. */
 export type ProfileStatus = 'draft' | 'researched' | 'calibrated'
 
+/**
+ * verified   — stated consistently by primary/reference sources
+ * reported   — stated by reviews or secondary coverage, not measured
+ * estimated  — third-party algorithmic analysis (BPM/key sites); indicative only
+ * unverified — inference or convention; NOT backed by research yet
+ */
+export type Confidence = 'verified' | 'reported' | 'estimated' | 'unverified'
+
+export interface Evidence {
+  confidence: Confidence
+  note: string
+  sources: string[]
+}
+
+/** A track used as a style reference, with only what research actually supported. */
+export interface ReferenceTrack {
+  title: string
+  year: number
+  release: string
+  features: string[]
+  producers: string[]
+  /** Third-party algorithmic tempo/key readings. Indicative, not authoritative. */
+  tempoEstimate: string | null
+  keyEstimate: string | null
+  /** What sources actually said about this record. No invented detail. */
+  notes: string[]
+  sources: string[]
+}
+
 export interface VocalDNA {
-  /** e.g. "melodic mumble", "sung-rap" */
   delivery: string[]
-  /** Typical register / range description. */
   register: string
-  /** Signature ad-libs. Used as sprinkle tokens in generation. */
   adLibs: string[]
-  /** Auto-tune / pitch treatment intensity, 0..1 */
+  /** 0..1 */
   autotuneIntensity: number
-  /** Layering habits: doubles, octaves, harmonies. */
   layering: string[]
-  /** Emotional colour of the performance. */
   emotionalTone: string[]
 }
 
 export interface ProductionDNA {
-  /** Core instruments / sound sources. */
   palette: string[]
-  /** Signature textures and processing. */
   textures: string[]
-  /** Typical drum machine / kit character. */
   drums: string[]
-  /** 808 behaviour: glide, distortion, tuning. */
   bass: string[]
-  /** How dirty the master feels, 0..1 */
+  /** 0..1 */
   distortion: number
-  /** Space: dry vs cavernous, 0..1 */
+  /** 0..1 */
   space: number
 }
 
 export interface RhythmDNA {
   tempoRange: [number, number]
-  /** Most common feel. */
   groove: string[]
-  /** Hi-hat subdivision habits. */
   hiHatPatterns: string[]
+  /** 0..1 */
   swing: number
 }
 
 export interface HarmonyDNA {
   preferredKeys: string[]
   scales: string[]
-  /** Loop-length chord motion, described not notated (draft). */
   progressions: string[]
   mood: string[]
 }
 
 export interface StructureDNA {
-  /** Typical arrangement skeleton. */
   arrangement: string[]
   typicalLengthSeconds: [number, number]
+  /** 0..1 */
   hookDensity: number
-  /** Does the track usually open cold, on ad-libs, on a sample? */
   intro: string
 }
 
 export interface LyricalDNA {
   themes: string[]
   imagery: string[]
-  /** Rhyme habits — used to steer phrasing, never to rewrite user lyrics. */
   rhymeStyle: string[]
-  /** Syllables per bar, rough. */
+  /** Rough syllables per bar. */
   cadenceDensity: number
   vocabularyColour: string[]
 }
@@ -85,28 +101,14 @@ export interface MixDNA {
   lowEnd: string
   highEnd: string
   vocalPlacement: string
-  /** Loudness / clipping character, 0..1 */
+  /** 0..1 */
   saturation: number
 }
 
-/**
- * Tokens handed to the (future) music model. Kept separate from the
- * descriptive DNA so the prompt compiler stays dumb and swappable.
- */
 export interface PromptSeeds {
-  /** Positive style tokens. */
   include: string[]
-  /** Things the model must avoid. */
   exclude: string[]
-  /** Free-form seed sentence used as the prompt spine. */
   spine: string
-}
-
-export interface ResearchMeta {
-  /** Where the data came from. Empty while the profile is a draft. */
-  sources: string[]
-  lastReviewed: string | null
-  notes: string
 }
 
 export interface StyleDNA {
@@ -120,21 +122,39 @@ export interface StyleDNA {
   promptSeeds: PromptSeeds
 }
 
+/** Per-section sourcing, keyed by the StyleDNA sections. */
+export type DNAEvidence = Record<keyof Omit<StyleDNA, 'promptSeeds'>, Evidence>
+
+export interface ResearchMeta {
+  /** What the profile deliberately covers — profiles are scoped to an era. */
+  scope: string
+  referenceTracks: ReferenceTrack[]
+  sources: string[]
+  lastReviewed: string | null
+  /** Honest list of what research could NOT establish. */
+  openQuestions: string[]
+  notes: string
+}
+
 export interface StyleProfile {
   id: StyleProfileId
-  /** Shown in the UI. */
   displayName: string
-  /** One-line hook shown on the selector card. */
+  /** Public one-liner for the card. */
   tagline: string
-  /** Short public tags shown on the card. */
+  /** Short public quote shown on the selected-style panel. */
+  quote: string
+  /** Public blurb on the selected-style panel. */
+  blurb: string
   tags: string[]
   era: string
   origin: string
   status: ProfileStatus
-  /** Bumped whenever the DNA changes, so generations stay traceable. */
   version: string
+  /** Optional portrait. Supply a licensed image; the UI falls back to a mark. */
+  portrait: string | null
   /** Hidden. Never render this. */
   dna: StyleDNA
+  evidence: DNAEvidence
   research: ResearchMeta
 }
 
@@ -143,9 +163,14 @@ export interface ArtistSummary {
   id: StyleProfileId
   displayName: string
   tagline: string
+  quote: string
+  blurb: string
   tags: string[]
   era: string
   status: ProfileStatus
+  portrait: string | null
+  /** False for artists shown in the grid that have no profile yet. */
+  available: boolean
 }
 
 export function toArtistSummary(profile: StyleProfile): ArtistSummary {
@@ -153,8 +178,12 @@ export function toArtistSummary(profile: StyleProfile): ArtistSummary {
     id: profile.id,
     displayName: profile.displayName,
     tagline: profile.tagline,
+    quote: profile.quote,
+    blurb: profile.blurb,
     tags: profile.tags,
     era: profile.era,
     status: profile.status,
+    portrait: profile.portrait,
+    available: true,
   }
 }

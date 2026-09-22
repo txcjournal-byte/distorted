@@ -10,13 +10,85 @@ import { trippieRedd } from './artists/trippie-redd'
  */
 const STYLE_PROFILES: StyleProfile[] = [trippieRedd]
 
+/**
+ * Names that appear in the style grid but have no researched Style DNA yet.
+ * They render as locked cards — selectable only once a profile lands above.
+ * Tags are genre labels for layout, not claims about a Style DNA.
+ */
+const UPCOMING: ArtistSummary[] = [
+  {
+    id: 'chief-keef',
+    displayName: 'CHIEF KEEF',
+    tagline: '',
+    quote: '',
+    blurb: '',
+    tags: ['DRILL', 'RAW', 'LEGENDARY'],
+    era: '',
+    status: 'draft',
+    portrait: null,
+    available: false,
+  },
+  {
+    id: 'rio-da-yung-og',
+    displayName: 'RIO DA YUNG OG',
+    tagline: '',
+    quote: '',
+    blurb: '',
+    tags: ['DETROIT', 'DARK', 'STREET'],
+    era: '',
+    status: 'draft',
+    portrait: null,
+    available: false,
+  },
+  {
+    id: 'playboi-carti',
+    displayName: 'PLAYBOI CARTI',
+    tagline: '',
+    quote: '',
+    blurb: '',
+    tags: ['RAGE', 'EXPERIMENTAL', 'OPIUM'],
+    era: '',
+    status: 'draft',
+    portrait: null,
+    available: false,
+  },
+  {
+    id: 'lil-uzi-vert',
+    displayName: 'LIL UZI VERT',
+    tagline: '',
+    quote: '',
+    blurb: '',
+    tags: ['MELODIC', 'SPACEY', 'ENERGETIC'],
+    era: '',
+    status: 'draft',
+    portrait: null,
+    available: false,
+  },
+  {
+    id: 'ken-carson',
+    displayName: 'KEN CARSON',
+    tagline: '',
+    quote: '',
+    blurb: '',
+    tags: ['HARD', 'EXPERIMENTAL', 'CHAOTIC'],
+    era: '',
+    status: 'draft',
+    portrait: null,
+    available: false,
+  },
+]
+
 const BY_ID = new Map<StyleProfileId, StyleProfile>(
   STYLE_PROFILES.map((profile) => [profile.id, profile]),
 )
 
-/** Public, DNA-free list for the UI. */
+/** Public, DNA-free list for the UI: researched artists first, then locked ones. */
 export function listArtists(): ArtistSummary[] {
-  return STYLE_PROFILES.map(toArtistSummary)
+  return [...STYLE_PROFILES.map(toArtistSummary), ...UPCOMING]
+}
+
+export function getArtistSummary(id: StyleProfileId): ArtistSummary | undefined {
+  return listArtists().find((artist) => artist.id === id)
 }
 
 /** Internal lookup. Only generation code should call this. */
@@ -26,4 +98,13 @@ export function getStyleProfile(id: StyleProfileId): StyleProfile | undefined {
 
 export function getDefaultArtistId(): StyleProfileId {
   return STYLE_PROFILES[0].id
+}
+
+/** Genre filter options for the style search bar. */
+export function listGenres(): string[] {
+  const tags = new Set<string>()
+  for (const artist of listArtists()) {
+    for (const tag of artist.tags) tags.add(tag)
+  }
+  return [...tags].sort()
 }
